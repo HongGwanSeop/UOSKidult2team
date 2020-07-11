@@ -26,11 +26,11 @@ func main() {
 		if input == 0 {
 			h = strconv.Itoa((Heappop()))
 			min.WriteString(h + "\n")
-			min.Flush()
 		} else {
 			Heapin(input)
 		}
 	}
+	min.Flush()
 
 }
 func Heapin(dataa int) {
