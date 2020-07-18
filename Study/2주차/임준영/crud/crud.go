@@ -26,21 +26,19 @@ func create(col *mongo.Collection, name, number string) {
 }
 
 func read(col *mongo.Collection, name ...string) {
-	var p Person
-	var d bson.D
+	var p map[string]string
+	var m bson.M
 	for _, n := range name {
-		err := col.FindOne(context.TODO(), bson.D{
-			{Key: "name", Value: n},
-		}).Decode(&d)
+		filter := bson.D{{Key: "name", Value: n}}
+		err := col.FindOne(context.TODO(), filter).Decode(&m)
+		bsonBytes, _ := bson.Marshal(m)
+		bson.Unmarshal(bsonBytes, &p)
 		if err != nil {
 			fmt.Println(n)
 			fmt.Println(err)
 			continue
 		}
-		/// p.name = d.Map().(primitive.M)["name"]
-		fmt.Println("name: ", p.name, "number: ", p.number)
-		fmt.Printf("%+v\n", p)
-		fmt.Printf("%+v\n", d)
+		fmt.Println("name: ", p["name"], "number: ", p["number"])
 	}
 }
 
