@@ -5,12 +5,15 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Person struct {
-	name   string `bson:"name"`
-	number string `bson:"number"`
+	ID     primitive.ObjectID `bson:"_id"`
+	name   string             `bson:"name"`
+	number string             `bson:"number"`
 }
 
 func create(col *mongo.Collection, name, number string) {
@@ -23,29 +26,51 @@ func create(col *mongo.Collection, name, number string) {
 		return
 	}
 	fmt.Println(result)
+	fmt.Println(result.InsertedID)
 }
 
 func read(col *mongo.Collection, name ...string) {
 	var p map[string]string
-	var m bson.M
 	for _, n := range name {
 		filter := bson.D{{Key: "name", Value: n}}
-		err := col.FindOne(context.TODO(), filter).Decode(&m)
-		bsonBytes, _ := bson.Marshal(m)
-		bson.Unmarshal(bsonBytes, &p)
+		err := col.FindOne(context.TODO(), filter).Decode(&p)
 		if err != nil {
 			fmt.Println(n)
 			fmt.Println(err)
 			continue
 		}
 		fmt.Println("name: ", p["name"], "number: ", p["number"])
+		fmt.Printf("%+v\n", p)
 	}
 }
 
 func update(col *mongo.Collection, name, number string) {
+	filter := bson.D{{Key: "name", Value: name}}
+	upd := bson.D{{"$set", bson.D{{Key: "number", Value: number}}}}
+	result, err := col.UpdateOne(context.TODO(), filter, upd, options.Update().SetUpsert(true))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if result.MatchedCount != 0 {
+		fmt.Println("matched and replaced an existing document")
+		return
+	}
+	if result.UpsertedCount != 0 {
+		fmt.Printf("inserted a new document with ID %v\n", result.UpsertedID)
+		return
+	}
 }
 
 func deleteName(col *mongo.Collection, name string) {
+	result, err := col.DeleteMany(context.TODO(), bson.D{
+		{Key: "name", Value: name},
+	})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(result)
 }
 
 func crud(col *mongo.Collection, args ...string) {
@@ -63,7 +88,17 @@ func crud(col *mongo.Collection, args ...string) {
 		}
 		read(col, args[1:]...)
 	case "update":
+		if len(args) != 3 {
+			invalid()
+			return
+		}
+		update(col, args[1], args[2])
 	case "delete":
+		if len(args) != 2 {
+			invalid()
+			return
+		}
+		deleteName(col, args[1])
 	default:
 		invalid()
 	}
