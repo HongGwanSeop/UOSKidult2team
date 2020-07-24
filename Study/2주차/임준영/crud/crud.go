@@ -17,7 +17,7 @@ type Person struct {
 }
 
 func create(col *mongo.Collection, name, number string) {
-	result, err := col.InsertOne(context.TODO(), bson.D{
+	_, err := col.InsertOne(context.TODO(), bson.D{
 		{Key: "name", Value: name},
 		{Key: "number", Value: number},
 	})
@@ -25,8 +25,7 @@ func create(col *mongo.Collection, name, number string) {
 		fmt.Println(number)
 		return
 	}
-	fmt.Println(result)
-	fmt.Println(result.InsertedID)
+	fmt.Printf("Create Success: <%s, %s>\n", name, number)
 }
 
 func read(col *mongo.Collection, name ...string) {
@@ -35,12 +34,12 @@ func read(col *mongo.Collection, name ...string) {
 		filter := bson.D{{Key: "name", Value: n}}
 		err := col.FindOne(context.TODO(), filter).Decode(&p)
 		if err != nil {
-			fmt.Println(n)
+			fmt.Printf("Read Fail: <%s>, ", n)
 			fmt.Println(err)
 			continue
 		}
 		fmt.Println("name: ", p["name"], "number: ", p["number"])
-		fmt.Printf("%+v\n", p)
+		// fmt.Printf("%+v\n", p)
 	}
 }
 
@@ -70,7 +69,11 @@ func deleteName(col *mongo.Collection, name string) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(result)
+	if result.DeletedCount > 0 {
+		fmt.Printf("Delete Success: <%s>\n", name)
+	} else {
+		fmt.Printf("Delete Fail: <%s>\n", name)
+	}
 }
 
 func crud(col *mongo.Collection, args ...string) {
